@@ -12,6 +12,9 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
     maxAF = float(maxMAF)
     AFD = float(AFD)
     maxHetRate = float(maxHetRate)
+
+    # map from VCF column to sample name
+    sample_to_col = dict()
     
 # load the sample data
     file = open(sampleFile,'r')
@@ -25,38 +28,50 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
     asn = set()
     eur = set()
 
-    for i in range(0,len(sample)):
+    for i in xrange(len(sample)):
         if sample[i][2] == 'AMR':
-            amr.add(i);
+            amr.add(sample[i][0]);
         elif sample[i][2] == 'AFR':
-            afr.add(i);
+            afr.add(sample[i][0]);
         elif sample[i][2] == 'ASN':
-            asn.add(i);
+            asn.add(sample[i][0]);
         elif sample[i][2] == 'EUR':
-            eur.add(i)
+            eur.add(sample[i][0])
 
     # load the snp data
     snp = []
     for line in data:
-        line = line.strip().split('\t')
+        if line[0] == "#":
+            if line[:6] == "#CHROM":
+                v = line.rstrip().split('\t')
+                for i in xrange(9,len(v)):
+                    sample_to_col[v[i]] = i
+            continue
+
+        # split the line by tabs
+        v = line.rstrip().split('\t')
+
+        # number of heterozygotes at locus.
         numHet = 0
 
         # the number of samples that are not ./. at the locus
         numInformative = 0;
-        for i in range(8,len(line)):
-            if line[i] == "./.":
-                line[i] = -1
+        for i in range(9,len(v)):
+            gt = v[i].split(":")[0]
+            print gt
+            if gt == "./.":
+                v[i] = -1
             else:
-                line[i] = line[i].replace(line[3],'0')
-                line[i] = line[i].replace(line[4],'1')
-                line[i] = str(int(line[i][0]) + int(line[i][2]))
+                v[i] = gt.replace(v[3],'0')
+                v[i] = gt.replace(v[4],'1')
+                v[i] = str(int(v[i][0]) + int(v[i][2]))
                 numInformative += 1
 
-            # number of heterozygotes at locus.
-            if line[i] == '1':
+            if v[i] == '1':
                 numHet += 1
 
-        gen = line[8:]
+        gen = v[9:]
+        print gen
         maxHetCount = maxHetRate * numInformative
 
         # now calculate the allele frequencies for the total set, and for each subpopulation
@@ -85,7 +100,8 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
         eurCount = float(0)
         # number of informative eur at that locus
         eurInf = 0
-        for val in eur:
+        for sample in eur:
+            val = sample_to_col[sample]
             if gen[val] != -1:
                 eurCount = eurCount + float(gen[val])
                 eurInf += 1
@@ -95,7 +111,8 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
 
         afrCount = float(0)
         afrInf = 0
-        for val in afr:
+        for sample in afr:
+            val = sample_to_col[sample]
             if gen[val] != -1:
                 afrCount = afrCount + float(gen[val])
                 afrInf += 1
@@ -105,7 +122,8 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
 
         asnCount = float(0)
         asnInf = 0
-        for val in asn:
+        for sample in asn:
+            val = sample_to_col[sample]
             if gen[val] != -1:
                 asnCount = asnCount + float(gen[val])
                 asnInf += 1
@@ -115,7 +133,8 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
 
         amrCount = float(0)
         amrInf = 0
-        for val in amr:
+        for sample in amr:
+            val = sample_to_col[sample]
             if gen[val] != -1:
                 amrCount = amrCount + float(gen[val])
                 amrInf += 1
@@ -141,22 +160,22 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
                 continue
 
         # print output
-        print '\t'.join(map(str, [line[0],
-                                  int(line[2])-1,
-                                  line[2],
-                                  line[5]] +
-                            line[8:]))
+        print '\t'.join(map(str, [v[0],
+                                  int(v[2])-1,
+                                  v[2],
+                                  v[5]] +
+                            v[8:]))
 
-        # print '\t'.join(map(str, [line[0],
-        #                           line[2],
-        #                           line[5],
-        #                           line[6],
+        # print '\t'.join(map(str, [v[0],
+        #                           v[2],
+        #                           v[5],
+        #                           v[6],
         #                           round(tAF,2),
         #                           round(amrAF,2),
         #                           round(afrAF,2),
         #                           round(asnAF,2),
         #                           round(eurAF,2)] +
-        #                     line[8:]))
+        #                     v[8:]))
 
 #---------------------------------------------------------------------------
 # argument parsing
