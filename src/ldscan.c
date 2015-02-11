@@ -78,7 +78,8 @@ void get_rates(int *loci,
   int total = num_hom_ref + num_het + num_hom_alt;
   
   rates[0] = ((double)num_hom_ref) / ((double)total);
-  rates[1] = ((double)num_hom_alt) / ((double)total);
+  rates[1] = ((double)num_het) / ((double)total);
+  rates[2] = ((double)num_hom_alt) / ((double)total);
 }
 
 int decToBase(int x,
@@ -199,7 +200,6 @@ int main (int argc, char **argv)
   }
 
   // parse the positional arguments
-  /* samples_file_name = argv[argc-1]; */
   file_name = argv[argc-1];
   
   if (argc < 2) {
