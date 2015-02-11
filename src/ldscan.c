@@ -3,9 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 
-double get_X(double observed,
-             double expected,
-	     double min_exp)
+double get_chi(double observed,
+	       double expected,
+	       double min_exp)
 {
   double numer;
   if (expected > min_exp && expected != 0) {
@@ -30,10 +30,10 @@ void get_expected(double *rates_1,
 }
 
 void get_observed(int *locus_1,
-                   int *locus_2,
-                   int num_samples,
-                   double *d_observed,
-		   int *multi_informative)
+		  int *locus_2,
+		  int num_samples,
+		  double *d_observed,
+		  int *multi_informative)
 {
   int i;
   for (i = 0; i < 9; ++i) 
@@ -152,7 +152,6 @@ int main (int argc, char **argv)
   double min_exp = 5.0;
   int brief = 0;
   char *file_name;
-  char *samples_file_name;
 
   int i;
   int c;
@@ -200,8 +199,8 @@ int main (int argc, char **argv)
   }
 
   // parse the positional arguments
-  samples_file_name = argv[argc-1];
-  file_name = argv[argc-2];
+  /* samples_file_name = argv[argc-1]; */
+  file_name = argv[argc-1];
   
   if (argc < 2) {
     return usage();
@@ -212,58 +211,37 @@ int main (int argc, char **argv)
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
-  FILE *s = fopen(samples_file_name, "rt");
 
-  // make an array from the samples file
-  char line[max_line];
-  char **sample = (char **) malloc(3 * sizeof(char*));
-  int j = 0;
-  while (fgets(line, max_line, s) != NULL) {
-    char *sample_name = strtok(line, sep);
-    char *sample_ethn = strtok(NULL, sep);
-    char *sample_subpop = strtok(NULL, sep);
-
-    // copy the string into an array that will be retained
-    // through the end of the run
-    //sample[0] = strdup(sample_name);
-    //sample[1] = strdup(sample_ethn);
-    //sample[2] = strdup(sample_subpop);
-
-    ++j;
-  }
-  fclose(s);
-
-  // for (j = 0; j < num_samples; ++j) {
-  //   printf("%d\n", j);   
-  // }
-  
   // array of arrays containing genotype info for each sample
   // at each locus
   char **chrArr = (char **) malloc(num_loci * sizeof(char*));
   int *posArr = (int *) malloc(num_loci * sizeof(int));
-  char **geneArr = (char **) malloc(num_loci * sizeof(char*));
+  /* char **geneArr = (char **) malloc(num_loci * sizeof(char*)); */
   char ** rsIdArr = (char **) malloc(num_loci * sizeof(char*));
   int *num_informative = (int *) malloc(num_loci * sizeof(int));
   int **M = (int **) malloc(num_loci * sizeof(int*));
   
-  // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
-  j = 0;
+  // read each line of the variants file
+  // 1       752565  752566  rs3094315       1       2       1       1       2       2
+  char line[max_line];
+  int j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
-    int pos = atoi(strtok(NULL, sep));
+    int pos = atoi(strtok(NULL, sep)) + 1;
+    int end = atoi(strtok(NULL, sep));
     char *rsId = strtok(NULL, sep);
-    char *gene = strtok(NULL, sep);
+    /* char *gene = strtok(NULL, sep); */
     int inf = 0;
     
-    char *rate_1 = strtok(NULL, sep);
-    char *rate_2 = strtok(NULL, sep);
-    char *rate_3 = strtok(NULL, sep);
-    char *rate_4 = strtok(NULL, sep);
-    char *rate_5 = strtok(NULL, sep);
+    /* char *rate_1 = strtok(NULL, sep); */
+    /* char *rate_2 = strtok(NULL, sep); */
+    /* char *rate_3 = strtok(NULL, sep); */
+    /* char *rate_4 = strtok(NULL, sep); */
+    /* char *rate_5 = strtok(NULL, sep); */
 
     chrArr[j] = strdup(chr);
     posArr[j] = pos;
-    geneArr[j] = strdup(gene);
+    /* geneArr[j] = strdup(gene); */
     rsIdArr[j] = strdup(rsId);
 
     int *locus_gts = (int *) malloc(num_samples * sizeof(int));
@@ -334,7 +312,7 @@ int main (int argc, char **argv)
       // calculate chi values for each cell and the chi_sum value for the trio
       chi_sum = 0;
       for (l = 0; l < 9; ++l) {
-	chi[l] = get_X(observed[l],expected[l], min_exp);
+	chi[l] = get_chi(observed[l],expected[l], min_exp);
 	chi_sum += chi[l];
       }
       
@@ -347,9 +325,9 @@ int main (int argc, char **argv)
 	
 	else {
 	  for (l = 0; l < 9; ++l) {
-	    printf("%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
-		   chrArr[i],posArr[i],rsIdArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
-		   chrArr[j],posArr[j],rsIdArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
+		   chrArr[i],posArr[i],rsIdArr[i],rates[i][0],rates[i][1],rates[i][2],
+		   chrArr[j],posArr[j],rsIdArr[j],rates[j][0],rates[j][1],rates[j][2],
 		   m_gts[l],
 		   observed[l],expected[l],observed[l]-expected[l],
 		   chi[l],chi_sum);
@@ -361,13 +339,12 @@ int main (int argc, char **argv)
   
   for (j = 0; j < num_loci; ++j) {
     free(chrArr[j]);
-    free(geneArr[j]);
+    /* free(geneArr[j]); */
     free(rsIdArr[j]);
     free(rates[j]);
     free(M[j]);
   }
   free(posArr);
-  free(sample);
 
   return 0;
 }
