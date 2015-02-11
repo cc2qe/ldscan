@@ -140,6 +140,13 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
                 (abs(tAF-amrAF)/tAF) > AFD):
                 continue
 
+        # print output
+        print '\t'.join(map(str, [line[0],
+                                  int(line[2])-1,
+                                  line[2],
+                                  line[5]] +
+                            line[8:]))
+
         # print '\t'.join(map(str, [line[0],
         #                           line[2],
         #                           line[5],
@@ -151,21 +158,6 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
         #                           round(eurAF,2)] +
         #                     line[8:]))
 
-        print '\t'.join(map(str, [line[0],
-                                  int(line[2])-1,
-                                  line[2],
-                                  line[5],
-                                  line[6]] +
-                            line[8:]))
-
-
-        # print line[0] + "\t" + line[2] + "\t" + line[5] + "\t" + line[6] + '\t' + \
-        # str(tAF)[0:4] + "\t" + str(amrAF)[0:4] + "\t" + str(afrAF)[0:4] + "\t" + str(asnAF)[0:4] + "\t" + str(eurAF)[0:4] + "\t",
-        # for item in line[8:]:
-        #     print str(item) + "\t",
-        # print
-
-          
 #---------------------------------------------------------------------------
 # argument parsing
 
