@@ -1,4 +1,4 @@
 CFLAGS = -O3
 
-ldsearch: ldsearch.c
-	gcc -o ldsearch ldsearch.c ${CFLAGS}
+ldscan: ldscan.c
+	gcc -o ldscan ldscan.c ${CFLAGS}
