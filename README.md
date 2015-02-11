@@ -1,2 +1,1 @@
-# ldscan
-Genome wide scan for linkage disequilibrium
+gcc -O3 -o ldsearch ldsearch.c
