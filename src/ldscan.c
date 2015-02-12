@@ -106,9 +106,51 @@ int decToBase(int x,
   return x_b;
 }
 
-void parseArgs ()
+// number of tests per chunk
+// ceil(n*(n-1)/(2c))
+int get_chunk_size(int num_loci,
+		   int num_chunks)
 {
+  int num_tests = num_loci * (num_loci - 1) / 2;
+
+  // this ceilings the number
+  return (num_tests + num_chunks - 1) / num_chunks;
+}
+
+void get_chunk_bounds(int num_loci,
+		     int chunk_number,
+		     int chunk_size,
+		     int *chunk_start,
+		     int *chunk_end)
+{
+  // the preferred number of tests before this chunk
+  int pref_tests_start = (chunk_number - 1) * chunk_size;
+  int pref_tests_end = chunk_number * chunk_size;
+
+  // the i value to start iterating over i,j loci pairs
+  int i = 0;
+  int tests = 0;
+  while (tests < pref_tests_start)
+    tests += num_loci - 1 - i++;
+  
+  // pad each chunk with an extra i to ensure the space is covered
+  *chunk_start = i + chunk_number - 1;
+
+  // iterate for the end value
+  while (tests < pref_tests_end)
+    tests += num_loci - 1 - i++;
+
+  // pad each chunk with an extra i to ensure the space is covered
+  *chunk_end = i + chunk_number;
+
+  // control for overflow
+  if (*chunk_start > num_loci)
+    *chunk_start = num_loci;
+  if (*chunk_end > num_loci)
+    *chunk_end = num_loci;
+  
   return;
+  
 }
 
 int usage()
@@ -300,15 +342,19 @@ int main (int argc, char **argv)
   }
 
   // this takes the ceiling of num_loci / num_chunks by using integer division
-  int chunk_size = (num_loci + num_chunks - 1) / num_chunks;
-  int chunk_start = (chunk - 1) * chunk_size;
-  int chunk_end = chunk * chunk_size;
-  if (chunk_start > num_loci)
-    chunk_start = num_loci;
-  if (chunk_end > num_loci)
-    chunk_end = num_loci;
+  int chunk_size = get_chunk_size(num_loci, num_chunks);
+  int chunk_start, chunk_end;
+
+  // chunk_start and chunk_end are updated by this function
+  get_chunk_bounds(num_loci,
+		   chunk,
+		   chunk_size,
+		   &chunk_start,
+		   &chunk_end);
   
   // analyze the chunk
+  fprintf(stderr, "Chunk start locus: %d\n", chunk_start);
+  fprintf(stderr, "Chunk end locus: %d\n", chunk_end);
   for (i = chunk_start; i < chunk_end; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
