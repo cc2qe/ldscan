@@ -76,7 +76,7 @@ void get_rates(int *loci,
   }
 
   int total = num_hom_ref + num_het + num_hom_alt;
-  
+
   rates[0] = ((double)num_hom_ref) / ((double)total);
   rates[1] = ((double)num_het) / ((double)total);
   rates[2] = ((double)num_hom_alt) / ((double)total);
@@ -108,28 +108,36 @@ int decToBase(int x,
 
 // number of tests per chunk
 // ceil(n*(n-1)/(2c))
-int get_chunk_size(int num_loci,
-		   int num_chunks)
+unsigned long long int get_chunk_size(unsigned long long int num_loci,
+				      int num_chunks)
 {
-  int num_tests = num_loci * (num_loci - 1) / 2;
+  unsigned long long int num_tests = num_loci * (num_loci - 1) / 2;
+
+  /* fprintf(stderr, "num_tests: %llu\n", num_tests); */
 
   // this ceilings the number
-  return (num_tests + num_chunks - 1) / num_chunks;
+  unsigned long long int chunk_size;
+  chunk_size = (num_tests + num_chunks - 1) / num_chunks;
+  return chunk_size;
 }
 
-void get_chunk_bounds(int num_loci,
-		     int chunk_number,
-		     int chunk_size,
-		     int *chunk_start,
-		     int *chunk_end)
+void get_chunk_bounds(unsigned long long int num_loci,
+		      int chunk_number,
+		      unsigned long long int chunk_size,
+		      unsigned long long int *chunk_start,
+		      unsigned long long int *chunk_end)
 {
   // the preferred number of tests before this chunk
-  int pref_tests_start = (chunk_number - 1) * chunk_size;
-  int pref_tests_end = chunk_number * chunk_size;
+  unsigned long long int pref_tests_start = (chunk_number - 1) * chunk_size;
+  unsigned long long int pref_tests_end = chunk_number * chunk_size;
+
+  /* fprintf(stderr, "chunk_size: %llu\n", chunk_size); */
+  /* fprintf(stderr, "pref_tests_start: %llu\n", pref_tests_start); */
+  /* fprintf(stderr, "pref_tests_end: %llu\n", pref_tests_end); */
 
   // the i value to start iterating over i,j loci pairs
-  int i = 0;
-  int tests = 0;
+  unsigned long long int i = 0;
+  unsigned long long int tests = 0;
   while (tests < pref_tests_start)
     tests += num_loci - 1 - i++;
   
@@ -188,8 +196,8 @@ int usage()
 int main (int argc, char **argv)
 {
   int min_distance = 0;
-  int num_samples;
-  int num_loci;
+  uint num_samples;
+  unsigned long long int num_loci;
   int set_size;
   double min_chi_sum = 0;
   int yates = 0;
@@ -202,7 +210,7 @@ int main (int argc, char **argv)
   int num_chunks = 1;
   char *file_name;
 
-  int i;
+  unsigned long long int i;
   int c;
   opterr = 0;
 
@@ -261,7 +269,7 @@ int main (int argc, char **argv)
   fprintf(stderr, "Processing chunk %d of %d\n", chunk, num_chunks);
 
   // the maximum chars per line of file to read in. (should be more than double the number of samples)
-  int max_line = 10000;
+  int max_line = 50000;
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
@@ -278,7 +286,7 @@ int main (int argc, char **argv)
   // read each line of the variants file
   // 1       752565  752566  rs3094315       1       2       1       1       2       2
   char line[max_line];
-  int j = 0;
+  unsigned long long int j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
     int pos = atoi(strtok(NULL, sep)) + 1;
@@ -287,12 +295,6 @@ int main (int argc, char **argv)
     /* char *gene = strtok(NULL, sep); */
     int inf = 0;
     
-    /* char *rate_1 = strtok(NULL, sep); */
-    /* char *rate_2 = strtok(NULL, sep); */
-    /* char *rate_3 = strtok(NULL, sep); */
-    /* char *rate_4 = strtok(NULL, sep); */
-    /* char *rate_5 = strtok(NULL, sep); */
-
     chrArr[j] = strdup(chr);
     posArr[j] = pos;
     /* geneArr[j] = strdup(gene); */
@@ -334,16 +336,18 @@ int main (int argc, char **argv)
   double expected[9], observed[9], chi[9];
   double chi_sum;
   
-  double *rates[num_loci];
+  double **rates = malloc(num_loci * sizeof(double));
+
+  /* double *rates[num_loci]; */
   for (i = 0; i < num_loci; ++i) {
     double *rate = (double *) malloc(3 * sizeof(double));
     get_rates(M[i], num_samples, rate);
     rates[i] = rate;
   }
 
-  // this takes the ceiling of num_loci / num_chunks by using integer division
-  int chunk_size = get_chunk_size(num_loci, num_chunks);
-  int chunk_start, chunk_end;
+  // get the chunk size, start, and end
+  unsigned long long int chunk_size = get_chunk_size(num_loci, num_chunks);
+  unsigned long long int chunk_start, chunk_end;
 
   // chunk_start and chunk_end are updated by this function
   get_chunk_bounds(num_loci,
@@ -353,8 +357,8 @@ int main (int argc, char **argv)
 		   &chunk_end);
   
   // analyze the chunk
-  fprintf(stderr, "Chunk start locus: %d\n", chunk_start);
-  fprintf(stderr, "Chunk end locus: %d\n", chunk_end);
+  fprintf(stderr, "Chunk start locus: %llu\n", chunk_start);
+  fprintf(stderr, "Chunk end locus: %llu\n", chunk_end);
   for (i = chunk_start; i < chunk_end; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
@@ -386,7 +390,7 @@ int main (int argc, char **argv)
       
       if (chi_sum >= min_chi_sum) {
 	if (brief) {
-	  printf("%d\t%d\t%f\n",
+	  printf("%llu\t%llu\t%f\n",
 		 i,j,
 		 chi_sum);
 	}
@@ -413,6 +417,7 @@ int main (int argc, char **argv)
     free(M[j]);
   }
   free(posArr);
+  free(rates);
 
   return 0;
 }
