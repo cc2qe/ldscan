@@ -137,6 +137,7 @@ int usage()
 	  "                   if the expected freq is greater than MIN_EXP\n"
 	  "                     (default: 5)\n"
 	  "  -b               brief but faster output\n"
+	  "  -c INT,INT       process chunk INT out of INT total chunks\n"
 	  "\n"
 	  );
   return 1;
@@ -152,13 +153,18 @@ int main (int argc, char **argv)
   int yates = 0;
   double min_exp = 5.0;
   int brief = 0;
+  
+  char raw[100];
+
+  int chunk = 1;
+  int num_chunks = 1;
   char *file_name;
 
   int i;
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:b")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:c:b")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -186,6 +192,9 @@ int main (int argc, char **argv)
     case 'b':
       brief = 1;
       break;
+    case 'c':
+      sscanf(optarg, "%d,%d", &chunk, &num_chunks);
+      break;
     case '?':
       if (optopt == 'c')
 	fprintf(stderr, "Option -%c requires an argument\n", optopt);
@@ -205,7 +214,10 @@ int main (int argc, char **argv)
   if (argc < 2) {
     return usage();
   }
-  
+
+  // print chunk info
+  fprintf(stderr, "Processing chunk %d of %d\n", chunk, num_chunks);
+
   // the maximum chars per line of file to read in. (should be more than double the number of samples)
   int max_line = 10000;
   char *sep = "\t";
@@ -287,7 +299,17 @@ int main (int argc, char **argv)
     rates[i] = rate;
   }
 
-  for (i = 0; i < num_loci; ++i) {
+  // this takes the ceiling of num_loci / num_chunks by using integer division
+  int chunk_size = (num_loci + num_chunks - 1) / num_chunks;
+  int chunk_start = (chunk - 1) * chunk_size;
+  int chunk_end = chunk * chunk_size;
+  if (chunk_start > num_loci)
+    chunk_start = num_loci;
+  if (chunk_end > num_loci)
+    chunk_end = num_loci;
+  
+  // analyze the chunk
+  for (i = chunk_start; i < chunk_end; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
       // minimum distance

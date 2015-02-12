@@ -62,7 +62,7 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
         gen = v[9:]
         for i in xrange(len(gen)):
             gt = gen[i].split(":")[0]
-            if gt == "./.":
+            if gt == "./." or gt == ".":
                 gen[i] = -1
             else:
                 gen[i] = gt.replace(v[3],'0')
@@ -81,7 +81,10 @@ def filter_vcf(data, sampleFile, maxHetRate, minMAF, maxMAF, AFD):
         for i in range(0,len(gen)):
             if gen[i] != -1:
                 tCount = tCount + float(gen[i])
-        tAF = tCount / (2*numInformative)
+        try:
+            tAF = tCount / (2*numInformative)
+        except ZeroDivisionError:
+            tAF = -1
 
         # now calculate the total variance:
         # how to calculate variance: 
