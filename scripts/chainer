@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import sys
+import getopt
+import string
+from optparse import OptionParser
+
+def chainer(clusterFile):
+
+    if clusterFile == "stdin":
+        data = sys.stdin
+    else:
+        data = open(clusterFile, 'r')
+    cluster = []
+    counter = 0
+    d = {}
+    for line in data:
+        xval = line.strip().split('\t')
+        yval = xval[4].split(',')
+        for el in yval:
+            d.setdefault(el,[]).append(xval[3])
+        currSet = set(yval)
+        if counter == 0:
+            cluster.append(currSet)
+        elif counter > 0:
+            index = []
+            for i in range(len(cluster)):
+                if len(currSet & cluster[i]) > 0:
+                    index.append(i)
+            if len(index) == 0:
+                cluster.append(currSet) 
+            elif len(index) == 1:
+                for i in (range(len(index))):
+                    cluster[index[0]] = cluster[index[0]] | currSet
+            elif len(index) > 1:
+                cluster[index[0]] = cluster[index[0]] | currSet
+                for i in range(1,len(index)):
+                    cluster[index[0]] = cluster[index[0]] | cluster[index[i]]
+                for i in reversed(range(1,len(index))):
+                    cluster.pop(index[i])
+        counter = counter + 1
+    clusterCount = 1
+    for line in cluster:
+        for el in line:
+            for i in range(len(d[el])):
+                print "chainID=" + str(clusterCount) + "\t" + str(el) + "\t" + str(d[el][i]) + "\t" + "numHydra=" + str(len(line))
+        clusterCount = clusterCount + 1
+
+class Usage(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def main():
+
+    usage = """%prog -i <file>
+
+chainer
+Author: Ira Hall	
+Description: chain breakpoint clusters
+    """
+    parser = OptionParser(usage)
+
+    parser.add_option("-i", "--clusterFile", dest="clusterFile", 
+        help="cluster file (-i stdin).",
+        metavar="FILE")
+
+    (opts, args) = parser.parse_args()
+
+    if opts.clusterFile is None:
+        parser.print_help()
+        print
+    else:
+        chainer(opts.clusterFile)
+
+#############################################
+if __name__ == "__main__":
+	sys.exit(main()) 
