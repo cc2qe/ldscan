@@ -27,7 +27,14 @@ description: cluster a BEDPE file by position. input must be sorted")
                         dest='min_cluster_size',
                         required=False,
                         default=2,
-                        help='max separation distance (bp) of adjacent loci in cluster [100000]')
+                        help='minimum cluster size to report feature [2]')
+    parser.add_argument('-r', '--min_reciprocal',
+                        metavar='INT', type=int,
+                        dest='min_reciprocal',
+                        required=False,
+                        default=0,
+                        help='min unique loci on each partner to report feature [0]')
+
     parser.add_argument('input', nargs='?',
                         type=argparse.FileType('r'),
                         default=None,
@@ -61,6 +68,8 @@ class Cluster(object):
         self.max_b = 0
 
         self.size = 0
+        self.uniq_a = set()
+        self.uniq_b = set()
 
     # check whether a bedpe object is addable to this
     # cluster given the max_distance
@@ -93,6 +102,12 @@ class Cluster(object):
         self.max_b = max(self.max_b, bedpe.end_b)
 
         self.elements.append(bedpe)
+        self.uniq_a.add((bedpe.chrom_a,
+                         bedpe.start_a,
+                         bedpe.end_a))
+        self.uniq_b.add((bedpe.chrom_b,
+                         bedpe.start_b,
+                         bedpe.end_b))
         self.size += 1
 
     def get_cluster_string(self):
@@ -134,18 +149,21 @@ class Bedpe(object):
 
 # prints and removes clusters from cluster_list that are beyond
 # distance window
-def prune(cluster_list, bedpe, max_distance, min_cluster_size):
+def prune(cluster_list, bedpe, max_distance, min_cluster_size, min_reciprocal):
     new_cluster_list = []
     global cluster_counter
 
     for cluster in cluster_list:
         # cluster is beyond updatable window:
-        if (cluster.chrom_a != bedpe.chrom_a
+        if (bedpe is None
+            or cluster.chrom_a != bedpe.chrom_a
             or cluster.min_a - max_distance > bedpe.end_a
             or cluster.max_a + max_distance < bedpe.start_a):
 
             # print the cluster if eligible
-            if cluster.size >= min_cluster_size:
+            if (cluster.size >= min_cluster_size
+                and len(cluster.uniq_a) > min_reciprocal
+                and len(cluster.uniq_b) > min_reciprocal):
                 cluster_counter += 1
                 cluster.id = cluster_counter
                 print cluster.get_cluster_string()
@@ -158,7 +176,7 @@ def prune(cluster_list, bedpe, max_distance, min_cluster_size):
     return new_cluster_list
 
 # primary function
-def cluster_bedpe(in_file, max_distance, min_cluster_size):
+def cluster_bedpe(in_file, max_distance, min_cluster_size, min_reciprocal):
     # line number
     line_counter = 0
     # the number of clusters that have been output
@@ -184,24 +202,20 @@ def cluster_bedpe(in_file, max_distance, min_cluster_size):
             cluster_list.append(new_cluster)
 
         # prune and print eligible clusters
-        if line_counter % 100 == 0:
+        if line_counter % 1000 == 0:
             cluster_list = prune(cluster_list,
                                  bedpe,
                                  max_distance,
-                                 min_cluster_size)
+                                 min_cluster_size,
+                                 min_reciprocal)
 
+    # prune the cluster and print eligible
+    # features
     cluster_list = prune(cluster_list,
-                         bedpe,
+                         None,
                          max_distance,
-                         min_cluster_size)
-
-        # else:
-        #     # print cluster
-        #     if cluster.size >= min_cluster_size:
-        #         print cluster.get_cluster_string()
-        #         counter += 1
-        #     cluster = Cluster(counter)
-        #     cluster.add(bedpe)
+                         min_cluster_size,
+                         min_reciprocal)
 
     # close the input file
     in_file.close()
@@ -215,7 +229,7 @@ def main():
     args = get_args()
 
     # call primary function
-    cluster_bedpe(args.input, args.max_distance, args.min_cluster_size)
+    cluster_bedpe(args.input, args.max_distance, args.min_cluster_size, args.min_reciprocal)
 
 # initialize the script
 if __name__ == '__main__':
